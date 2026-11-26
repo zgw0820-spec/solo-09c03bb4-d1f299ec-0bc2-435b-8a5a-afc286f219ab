@@ -81,6 +81,31 @@ _FRAME_KEY_MAP = {
 }
 
 
+_RESERVATION_KEY_MAP = {
+    "首跳最早起发时刻": "hop1_earliest_start_us",
+    "首跳最早起发": "hop1_earliest_start_us",
+    "一跳最早起发时刻": "hop1_earliest_start_us",
+    "earliest_start_us": "hop1_earliest_start_us",
+    "hop1_earliest_start": "hop1_earliest_start_us",
+    "二跳最晚发完时刻": "hop2_latest_finish_us",
+    "二跳最晚发完": "hop2_latest_finish_us",
+    "第二跳最晚发完时刻": "hop2_latest_finish_us",
+    "latest_finish_us": "hop2_latest_finish_us",
+    "hop2_latest_finish": "hop2_latest_finish_us",
+    "首跳发送耗时": "hop1_tx_us",
+    "一跳发送耗时": "hop1_tx_us",
+    "二跳发送耗时": "hop2_tx_us",
+    "中转等待上限": "max_relay_wait_us",
+    "中转等待上限us": "max_relay_wait_us",
+    "等待上限": "max_relay_wait_us",
+    "max_wait_us": "max_relay_wait_us",
+    "relay_wait_limit_us": "max_relay_wait_us",
+    "编号": "frame_id",
+    "名称": "frame_id",
+    "帧编号": "frame_id",
+}
+
+
 def _remap(d: Any, mapping: dict[str, str]) -> Any:
     if not isinstance(d, dict):
         return d
@@ -342,3 +367,87 @@ class VerifyRequest(BaseModel):
                 for i, fr in enumerate(self.frames, start=1)
             ),
         )
+
+
+class DrillCreateRequest(VerifyRequest):
+    """A drill is built from the two-hop config plus one fixed clock offset."""
+
+    @model_validator(mode="after")
+    def _require_single_fixed_offset(self) -> "DrillCreateRequest":
+        if self.offset_min_us != self.offset_max_us:
+            raise ValueError(
+                "a drill requires one fixed clock offset: pass clock_offset_us, "
+                "or a clock_offset_range_us whose two endpoints are equal"
+            )
+        return self
+
+
+class ReservationRequest(BaseModel):
+    """One diagnostic-frame reservation; every timestamp is on the hop-1 clock."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_compat(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        return _remap(dict(data), _RESERVATION_KEY_MAP)
+
+    frame_id: Optional[str] = Field(
+        default=None,
+        description="Optional caller-defined diagnostic frame identifier.",
+        validation_alias=AliasChoices("frame_id", "id", "name"),
+    )
+    hop1_earliest_start_us: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "Earliest hop-1 start instant on the hop-1 clock (unified timeline)."
+        ),
+        validation_alias=AliasChoices(
+            "hop1_earliest_start_us", "hop1_earliest_start", "earliest_start_us"
+        ),
+    )
+    hop2_latest_finish_us: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "Latest allowed hop-2 finish instant on the hop-1 clock "
+            "(unified timeline)."
+        ),
+        validation_alias=AliasChoices(
+            "hop2_latest_finish_us", "hop2_latest_finish", "latest_finish_us"
+        ),
+    )
+    hop1_tx_us: int = Field(
+        ...,
+        ge=0,
+        description="Hop-1 transmission duration in integer microseconds.",
+        validation_alias=AliasChoices("hop1_tx_us", "tx1_us", "hop1_duration_us"),
+    )
+    hop2_tx_us: int = Field(
+        ...,
+        ge=0,
+        description="Hop-2 transmission duration in integer microseconds.",
+        validation_alias=AliasChoices("hop2_tx_us", "tx2_us", "hop2_duration_us"),
+    )
+    max_relay_wait_us: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "Maximum allowed time between hop-1 finish and hop-2 start (us)."
+        ),
+        validation_alias=AliasChoices(
+            "max_relay_wait_us", "max_relay_wait", "relay_wait_limit_us",
+            "max_wait_us",
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _check_ordering(self) -> "ReservationRequest":
+        if self.hop2_latest_finish_us <= self.hop1_earliest_start_us:
+            raise ValueError(
+                "hop2_latest_finish_us must be later than hop1_earliest_start_us"
+            )
+        return self

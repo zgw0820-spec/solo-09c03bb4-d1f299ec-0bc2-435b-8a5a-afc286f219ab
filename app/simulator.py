@@ -323,6 +323,82 @@ def evaluate_offset(
     return result
 
 
+def simulate_periods(
+    cfg: VerifyConfig, delta_us: int, n_periods: int
+) -> list[dict[str, Any]]:
+    """Run exactly ``n_periods`` periods starting from empty queues.
+
+    This is the same FIFO / earliest-gate-start scheduling used by
+    :func:`evaluate_offset`, but bounded to a fixed horizon instead of running
+    until a deadline miss or a repeated state.  It is used by the reservation
+    service to learn which send intervals the periodic camera-trigger frames
+    occupy on each hop during the first ``n_periods`` periods.
+
+    Returns one trace row per frame instance (ordered by service order inside
+    each period), with unified-timeline event times; ``None`` means the event
+    has no feasible placement (frame longer than every window).
+    """
+    if n_periods < 1:
+        raise ValueError("n_periods must be >= 1")
+    period = cfg.period_us
+
+    order = sorted(
+        range(len(cfg.frames)),
+        key=lambda i: (cfg.frames[i].enqueue_offset_us, i),
+    )
+    hop1_open = cfg.hop1_gate.open_us
+    hop1_len = cfg.hop1_gate.length_us
+    hop2_open = cfg.hop2_gate.open_us - delta_us
+    hop2_len = cfg.hop2_gate.length_us
+
+    f1_prev: Optional[int] = None
+    f2_prev: Optional[int] = None
+    rows: list[dict[str, Any]] = []
+
+    for k in range(n_periods):
+        for original_index in order:
+            fr = cfg.frames[original_index]
+            arrival = k * period + fr.enqueue_offset_us
+
+            hop1_now = arrival if f1_prev is None else max(arrival, f1_prev)
+            s1 = earliest_gate_start(
+                hop1_now, fr.hop1_tx_us, hop1_open, hop1_len, period
+            )
+            f1: Optional[int] = None if s1 is None else s1 + fr.hop1_tx_us
+
+            enq2: Optional[int] = f1
+            s2: Optional[int] = None
+            f2: Optional[int] = None
+            if f1 is not None:
+                hop2_now = f1 if f2_prev is None else max(f1, f2_prev)
+                s2 = earliest_gate_start(
+                    hop2_now, fr.hop2_tx_us, hop2_open, hop2_len, period
+                )
+                if s2 is not None:
+                    f2 = s2 + fr.hop2_tx_us
+
+            rows.append(
+                {
+                    "period_index": k,
+                    "period_no": k + 1,
+                    "frame_index": original_index,
+                    "frame_no": fr.number,
+                    "frame_id": fr.frame_id,
+                    "arrival_timeline_us": arrival,
+                    "hop1_start_timeline_us": s1,
+                    "hop1_finish_timeline_us": f1,
+                    "hop2_enqueue_timeline_us": enq2,
+                    "hop2_start_timeline_us": s2,
+                    "hop2_finish_timeline_us": f2,
+                }
+            )
+
+            f1_prev = f1
+            f2_prev = f2
+
+    return rows
+
+
 def verify(cfg: VerifyConfig, include_trace: bool = False) -> dict[str, Any]:
     """Evaluate every integer offset in the configured range."""
     offsets = list(range(cfg.offset_min_us, cfg.offset_max_us + 1))

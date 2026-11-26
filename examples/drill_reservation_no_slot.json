@@ -1,0 +1,9 @@
+{
+  "_comment": "A reservation that cannot be placed: the required finish precedes the earliest possible delivery. The API answers HTTP 200 with available=false and a machine-readable reason; nothing is occupied.",
+  "frame_id": "diag-too-tight",
+  "hop1_earliest_start_us": 100,
+  "hop2_latest_finish_us": 150,
+  "hop1_tx_us": 30,
+  "hop2_tx_us": 30,
+  "max_relay_wait_us": 500
+}

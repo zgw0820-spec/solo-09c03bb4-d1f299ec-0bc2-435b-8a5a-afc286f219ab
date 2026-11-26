@@ -1,0 +1,11 @@
+{
+  "_comment": "Create a reservation drill: the original two-hop config plus one fixed clock offset (clock2 - clock1). The configuration must always meet its deadline at this offset, otherwise drill creation is rejected.",
+  "period_us": 1000,
+  "deadline_us": 1000,
+  "clock_offset_us": 0,
+  "hop1_gate": { "open_us": 0, "close_us": 900 },
+  "hop2_gate": { "open_us": 0, "close_us": 900 },
+  "frames": [
+    { "id": "cam-trigger", "enqueue_offset_us": 0, "hop1_tx_us": 100, "hop2_tx_us": 100 }
+  ]
+}
