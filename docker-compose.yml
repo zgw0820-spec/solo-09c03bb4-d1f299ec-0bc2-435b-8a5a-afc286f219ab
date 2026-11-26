@@ -1,0 +1,11 @@
+services:
+  tsn-verifier:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tsn-two-hop-verifier:1.0.0
+    container_name: tsn-verifier
+    ports:
+      # host:container — open http://localhost:8000/docs
+      - "8000:8000"
+    restart: unless-stopped

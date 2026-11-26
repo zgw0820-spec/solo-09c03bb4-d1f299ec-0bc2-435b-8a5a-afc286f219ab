@@ -1,0 +1,11 @@
+{
+  "_comment": "Boundary case: hop2 needs local finish <= 215us. It passes for clock2-clock1 <= 15us (offset 15 finishes exactly at close) and misses for offsets 16..20.",
+  "period_us": 1000,
+  "deadline_us": 400,
+  "clock_offset_range_us": [-20, 20],
+  "hop1_gate": { "open_us": 0, "close_us": 500 },
+  "hop2_gate": { "open_us": 0, "close_us": 215 },
+  "frames": [
+    { "id": "cam-trigger", "enqueue_offset_us": 0, "hop1_tx_us": 100, "hop2_tx_us": 100 }
+  ]
+}

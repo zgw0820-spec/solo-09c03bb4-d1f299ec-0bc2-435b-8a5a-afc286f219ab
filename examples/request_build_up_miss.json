@@ -1,0 +1,15 @@
+{
+  "_comment": "Queue build-up over periods: the first deadline miss is frame 3 in period 3, even though periods 1-2 survive.",
+  "period_us": 100,
+  "deadline_us": 100,
+  "clock_offset_us": 0,
+  "hop1_gate": { "open_us": 15, "close_us": 89 },
+  "hop2_gate": { "open_us": 16, "close_us": 95 },
+  "frames": [
+    { "id": "f1-late",   "enqueue_offset_us": 99, "hop1_tx_us": 22, "hop2_tx_us": 33 },
+    { "id": "f2-mid",    "enqueue_offset_us": 42, "hop1_tx_us": 11, "hop2_tx_us": 14 },
+    { "id": "f3-early",  "enqueue_offset_us": 0,  "hop1_tx_us": 12, "hop2_tx_us": 24 },
+    { "id": "f4-mid2",   "enqueue_offset_us": 56, "hop1_tx_us": 29, "hop2_tx_us": 12 }
+  ],
+  "include_trace": true
+}

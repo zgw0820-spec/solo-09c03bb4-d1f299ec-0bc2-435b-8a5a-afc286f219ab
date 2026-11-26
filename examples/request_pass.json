@@ -1,0 +1,14 @@
+{
+  "period_us": 1000,
+  "deadline_us": 1000,
+  "clock_offset_range_us": [-20, 20],
+  "hop1_gate": { "open_us": 0, "close_us": 900 },
+  "hop2_gate": { "open_us": 40, "close_us": 980 },
+  "frames": [
+    { "id": "cam-front", "enqueue_offset_us": 0,   "hop1_tx_us": 90, "hop2_tx_us": 120 },
+    { "id": "cam-left",  "enqueue_offset_us": 120, "hop1_tx_us": 90, "hop2_tx_us": 120 },
+    { "id": "cam-right", "enqueue_offset_us": 240, "hop1_tx_us": 90, "hop2_tx_us": 120 },
+    { "id": "cam-rear",  "enqueue_offset_us": 360, "hop1_tx_us": 90, "hop2_tx_us": 120 }
+  ],
+  "include_trace": false
+}
